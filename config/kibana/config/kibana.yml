@@ -1,0 +1,9 @@
+server.name: kibana
+server.host: "0"
+server.basePath: /kibana
+server.publicBaseUrl: http://localhost/kibana
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+monitoring.ui.container.elasticsearch.enabled: true
+elasticsearch.username: "elastic"
+elasticsearch.password: "elastic"
+xpack.security.enabled: true

@@ -1,0 +1,42 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ee:latest
+    expose:
+      - "22"
+      - "80"
+      - "443"
+    volumes:
+      - $GITLAB_HOME/data:/var/opt/gitlab
+      - $GITLAB_HOME/logs:/var/log/gitlab
+      - $GITLAB_HOME/config:/etc/gitlab
+    shm_size: '256m'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: "from_file('/omnibus_config.rb')"
+    configs:
+      - source: gitlab
+        target: /omnibus_config.rb
+    secrets:
+      - gitlab_root_password
+    networks:
+      - proxy
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    deploy:
+      mode: replicated
+      replicas: 1
+
+configs:
+  gitlab:
+    file: ./config/gitlab/gitlab.rb
+
+secrets:
+  gitlab_root_password:
+    file: ./config/gitlab/root_password.txt

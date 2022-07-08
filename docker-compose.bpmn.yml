@@ -1,0 +1,28 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  camunda:
+    image: camunda/camunda-bpm-platform:latest
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 0
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.camunda.rule=Host(`localhost`) && PathPrefix(`/camunda`)"
+        - "traefik.http.services.camunda.loadbalancer.server.port=8080"
+        - "traefik.http.routers.camunda.service=camunda"

@@ -1,0 +1,44 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+volumes:
+  minio-data:
+
+services:
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9001:9001"
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=miniopass
+      - MINIO_CONSOLE_SUBPATH=/minio
+    networks:
+      - proxy
+    command:
+      - server
+      - /data
+      - --console-address
+      - ":9001"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.minio.rule=Host(`localhost`) && PathPrefix(`/minio`)"
+        - "traefik.http.services.minio.loadbalancer.server.port=9000"
+        - "traefik.http.routers.minio.service=minio"
+        - "traefik.http.routers.minio-console.service=minio-console"
+        - "traefik.http.routers.minio-console.rule=Host(`localhost`) && PathPrefix(`/minio`)"
+        - "traefik.http.services.minio-console.loadbalancer.server.port=9001"

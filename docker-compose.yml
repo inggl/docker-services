@@ -1,0 +1,68 @@
+version: "3.8"
+
+networks:
+  local:
+  proxy:
+    name: proxy
+    external: true
+  db:
+    name: db
+    external: true
+
+services:
+  dataflow:
+    image: springcloud/spring-cloud-dataflow-server:latest
+    container_name: dataflow
+    user: root
+    restart: unless-stopped
+    ports:
+      - "9393:9393"
+    environment:
+      - SPRING_CLOUD_DATAFLOW_APPLICATIONPROPERTIES_STREAM_SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_CLOUD_DATAFLOW_APPLICATIONPROPERTIES_TASK_SPRING_CLOUD_TASK_CLOSECONTEXTENABLED=true
+      - SPRING_CLOUD_SKIPPER_CLIENT_SERVER_URI=${SKIPPER_URI:-http://skipper:7577}/api
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dataflow
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+    depends_on:
+      - skipper
+    networks:
+      - proxy
+      - db
+
+  skipper:
+    image: springcloud/spring-cloud-skipper-server:latest
+    container_name: skipper
+    user: root
+    restart: unless-stopped
+    ports:
+      - "7577:7577"
+      - "20000-20195:20000-20195"
+    environment:
+      - SPRING_CLOUD_SKIPPER_SERVER_PLATFORM_LOCAL_ACCOUNTS_DEFAULT_PORTRANGE_LOW=20000
+      - SPRING_CLOUD_SKIPPER_SERVER_PLATFORM_LOCAL_ACCOUNTS_DEFAULT_PORTRANGE_HIGH=20190
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/dataflow
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_CLOUD_SKIPPER_SERVER_DEPLOYER=ERROR
+    networks:
+      - proxy
+      - db
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    command:
+      - "redis-server"
+      - "--appendonly yes"
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
