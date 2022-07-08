@@ -42,6 +42,11 @@ docker-compose up -d dataflow
 ```
 
 #### Swarm
+Deploy all stacks
+```shell
+docker stack deploy --resolve-image changed -c docker-compose.proxy.yml proxy && docker stack deploy --resolve-image changed -c docker-compose.portainer.yml portainer && docker stack deploy --resolve-image changed -c docker-compose.db.yml db &&  docker stack deploy --resolve-image changed -c docker-compose.discovery.yml discovery && docker stack deploy --resolve-image changed -c docker-compose.auth.yml auth && docker stack deploy --resolve-image changed -c docker-compose.registry.yml registry && docker stack deploy --resolve-image changed -c docker-compose.amqp.yml amqp && docker stack deploy --resolve-image changed -c docker-compose.storage.yml storage && docker stack deploy --resolve-image changed -c docker-compose.mail.yml mail
+```
+
 ##### Stacks
 ###### Proxy
 ```shell

@@ -31,9 +31,9 @@ services:
       - CONSUL_BIND_INTERFACE=eth0
       - 'CONSUL_LOCAL_CONFIG={"ui_content_path": "/consul/ui", "skip_leave_on_interrupt": true}'
     ports:
-      - 8500:8500
-      - 8600:8600/tcp
-      - 8600:8600/udp
+      - "8500:8500"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
     networks:
       proxy:
       consul:
@@ -45,7 +45,7 @@ services:
         max-size: "10m"
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
       placement:
         constraints: [ node.role == manager ]
       labels:
