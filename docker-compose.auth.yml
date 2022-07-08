@@ -19,8 +19,8 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: postgres
       KC_DB_PASSWORD: postgres
-      KC_KEYCLOAK_ADMIN: keycloak
-      KC_KEYCLOAK_ADMIN_PASSWORD: keycloak
+      KEYCLOAK_ADMIN: keycloak
+      KEYCLOAK_ADMIN_PASSWORD: keycloak
     entrypoint: ["/opt/keycloak/bin/kc.sh", "start", "--auto-build", "--db=postgres"]
     networks:
       - proxy
