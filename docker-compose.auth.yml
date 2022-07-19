@@ -21,7 +21,10 @@ services:
       KC_DB_PASSWORD: postgres
       KEYCLOAK_ADMIN: keycloak
       KEYCLOAK_ADMIN_PASSWORD: keycloak
+      KC_FEATURES: docker
     entrypoint: ["/opt/keycloak/bin/kc.sh", "start", "--auto-build", "--db=postgres"]
+    volumes:
+      - ./config/keycloak/data/import/:/opt/keycloak/data/import/
     networks:
       - proxy
     logging:

@@ -12,10 +12,10 @@ services:
       - "22"
       - "80"
       - "443"
-    volumes:
-      - $GITLAB_HOME/data:/var/opt/gitlab
-      - $GITLAB_HOME/logs:/var/log/gitlab
-      - $GITLAB_HOME/config:/etc/gitlab
+    #volumes:
+      #- $GITLAB_HOME/data:/var/opt/gitlab
+      #- $GITLAB_HOME/logs:/var/log/gitlab
+      #- $GITLAB_HOME/config:/etc/gitlab
     shm_size: '256m'
     environment:
       GITLAB_OMNIBUS_CONFIG: "from_file('/omnibus_config.rb')"

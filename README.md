@@ -207,6 +207,11 @@ Password: __demo__
 <http://localhost:8200>
 
 ## Configuration
+### Keycloak
+```
+/opt/keycloak/bin/kc.sh export --file /opt/keycloak/data/import/realm.json --users same_file
+```
+
 ### Mongo
 #### Init replica set
 Generate secret key
