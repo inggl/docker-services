@@ -73,7 +73,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: mongo
       MONGO_INITDB_DATABASE: root
     volumes:
-      - ./config/mongo/init-mongo.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./config/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./config/mongo/mongo-init.sh:/docker-entrypoint-initdb.d/mongo-init.sh:ro
       - ./config/mongo/file.key:/data/file.key
     entrypoint:
       - bash
@@ -82,7 +83,7 @@ services:
         chmod 400 /data/file.key
         chown 999:999 /data/file.key
         exec docker-entrypoint.sh $$@
-    command: "mongod --bind_ip_all --replSet rs0 --keyFile /data/file.key --auth"
+    command: "mongod --bind_ip_all --replSet=rs0 --keyFile=/data/file.key --auth"
     networks:
       - proxy
       - db

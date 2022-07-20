@@ -219,19 +219,7 @@ Generate secret key
 openssl rand -base64 700 > file.key
 ```
 
-Go to mongo container
-```
-mongo -u mongo --authenticationDatabase admin -p
-```
-
-```
-db.runCommand({connectionStatus : 1})
-```
-
-```
-rs.initiate();
-```
-
-```
-rs.status();
+Init replica set
+```shell
+docker exec -it ${docker ps -q -f name=db_mongo} bin/bash --eval="mongosh -u mongo --authenticationDatabase admin -p mongo --eval 'rs.initiate({"_id": "rs0", "members": [{_id: 0, host: "mongo"}]})'"
 ```
