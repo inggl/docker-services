@@ -220,6 +220,6 @@ openssl rand -base64 700 > file.key
 ```
 
 Init replica set
-```shell
-docker exec -it ${docker ps -q -f name=db_mongo} bin/bash --eval="mongosh -u mongo --authenticationDatabase admin -p mongo --eval 'rs.initiate({"_id": "rs0", "members": [{_id: 0, host: "mongo"}]})'"
+```
+mongosh -u mongo --authenticationDatabase admin -p mongo --eval 'rs.initiate({"_id": "rs0", "members": [{_id: 0, host: "mongo"}]})'
 ```
