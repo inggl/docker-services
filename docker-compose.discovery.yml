@@ -1,0 +1,55 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+  consul:
+
+services:
+  consul_client: &consul_client
+    image: consul:latest
+    command: "agent -retry-join consul.server -client 0.0.0.0"
+    environment:
+      CONSUL_BIND_INTERFACE: eth0
+    networks:
+      proxy:
+      consul:
+        aliases:
+          - consul.client
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
+  consul_server:
+    <<: *consul_client
+    command: "agent -server -bootstrap-expect 1 -ui -retry-join consul-client -client 0.0.0.0"
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+      - 'CONSUL_LOCAL_CONFIG={"ui_content_path": "/consul/ui", "skip_leave_on_interrupt": true}'
+    ports:
+      - "8500:8500"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
+    networks:
+      proxy:
+      consul:
+        aliases:
+          - consul.server
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.consul.rule=Host(`localhost`) && (PathPrefix(`/consul/ui`) || PathPrefix(`/v1/`))"
+        - "traefik.http.services.consul.loadbalancer.server.port=8500"
+        - "traefik.http.routers.consul.service=consul"
+
+

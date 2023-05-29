@@ -1,0 +1,37 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  sonarqube:
+    image: sonarqube:latest
+    environment:
+      SONAR_WEB_CONTEXT: /sonar
+      #SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonar
+      #SONAR_JDBC_USERNAME: postgres
+      #SONAR_JDBC_PASSWORD: postgres
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - proxy
+    logging:
+      options:
+        max-size: "2m"
+        max-file: "5"
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sonarqube.rule=Host(`localhost`) && PathPrefix(`/sonar`)"
+        - "traefik.http.services.sonarqube-websecure.loadbalancer.server.port=9000"
+
+volumes:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:

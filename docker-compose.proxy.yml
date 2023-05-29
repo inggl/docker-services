@@ -1,0 +1,42 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    attachable: true
+
+services:
+  traefik:
+    image: "traefik:latest"
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.network=proxy"
+      - "--providers.docker.exposedbydefault=false"
+      - "--log.level=ERROR"
+    ports:
+      - "80:80"
+      - "433:433"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.api.rule=Host(`localhost`) && PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+        - "traefik.http.services.api.loadbalancer.server.port=8080"
+        - "traefik.http.routers.api.service=api@internal"
+        #- "traefik.http.routers.api.middlewares=auth"
+        #- "traefik.http.middlewares.auth.basicauth.users=test:"

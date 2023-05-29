@@ -1,0 +1,109 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+services:
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.route-prefix=/prometheus
+      - --web.external-url=http://localhost/prometheus
+    volumes:
+      - prometheus_data:/prometheus
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.prometheus.rule=Host(`localhost`) && PathPrefix(`/prometheus`)"
+        - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+        - "traefik.http.routers.prometheus.service=prometheus"
+
+  node_exporter:
+    image: prom/node-exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 0
+      placement:
+        constraints: [ node.role == manager ]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    command: --url_base_prefix=/cadvisor
+    environment:
+      - CADVISOR_HEALTHCHECK_URL=http://localhost/cadvisor/healthz
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 0
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.cadvisor.rule=Host(`localhost`) && PathPrefix(`/cadvisor`)"
+        - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
+        - "traefik.http.routers.cadvisor.service=cadvisor"
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=grafana
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+      - GF_SERVER_ROOT_URL=http://localhost/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 0
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.grafana.rule=Host(`localhost`) && PathPrefix(`/grafana`)"
+        - "traefik.http.services.grafana.loadbalancer.server.port=8080"
+        - "traefik.http.routers.grafana.service=grafana"

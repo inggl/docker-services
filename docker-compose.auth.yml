@@ -1,0 +1,42 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY: edge
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: postgres
+      KEYCLOAK_ADMIN: keycloak
+      KEYCLOAK_ADMIN_PASSWORD: keycloak
+      KC_FEATURES: docker
+    entrypoint: ["/opt/keycloak/bin/kc.sh", "start", "--auto-build", "--db=postgres"]
+    volumes:
+      - ./config/keycloak/data/import/:/opt/keycloak/data/import/
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.keycloak.rule=Host(`localhost`) && PathPrefix(`/auth/`)"
+        - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+        - "traefik.http.routers.keycloak.service=keycloak"

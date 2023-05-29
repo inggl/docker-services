@@ -1,0 +1,56 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  registry:
+    image: registry:2
+    ports:
+      - "5000:5000"
+    environment:
+      - REGISTRY_STORAGE_DELETE_ENABLED=true
+      - REGISTRY_HTTP_RELATIVEURLS=true
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.registry.rule=Host(`localhost`) && PathPrefix(`/v2`)"
+        - "traefik.http.services.registry.loadbalancer.server.port=5000"
+        - "traefik.http.routers.registry.service=registry"
+
+  verdaccio:
+    image: verdaccio/verdaccio
+    environment:
+      - VERDACCIO_PORT=4873
+      - VERDACCIO_PUBLIC_URL=http://localhost/verdaccio/
+    ports:
+      - "4873:4873"
+    volumes:
+      - "./config/verdaccio/conf:/verdaccio/conf"
+    networks:
+      - proxy
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.verdaccio.rule=Host(`localhost`) && PathPrefix(`/verdaccio/`)"
+        - "traefik.http.services.verdaccio.loadbalancer.server.port=4873"
+        - "traefik.http.routers.verdaccio.service=verdaccio"
+        - "traefik.http.routers.verdaccio.middlewares=verdaccio-stripprefix"
+        - "traefik.http.middlewares.verdaccio-stripprefix.stripprefix.prefixes=/verdaccio"
+        - "traefik.http.middlewares.verdaccio.stripprefix.forceSlash=false"

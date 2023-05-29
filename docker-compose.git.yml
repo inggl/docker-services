@@ -1,0 +1,72 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ee:latest
+    #volumes:
+      #- $GITLAB_HOME/data:/var/opt/gitlab
+      #- $GITLAB_HOME/logs:/var/log/gitlab
+      #- $GITLAB_HOME/config:/etc/gitlab
+    environment:
+      GITLAB_OMNIBUS_CONFIG: "from_file('/omnibus_config.rb')"
+    configs:
+      - source: gitlab
+        target: /omnibus_config.rb
+    secrets:
+      - gitlab_root_password
+    deploy:
+      mode: replicated
+      replicas: 0
+    networks:
+      - proxy
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    deploy:
+      mode: replicated
+      replicas: 0
+
+  gitea:
+    image: gitea/gitea:latest
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__server__ROOT_URL=http://localhost/gitea/
+    networks:
+      - proxy
+    volumes:
+      - gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "222:22"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.gitea.rule=Host(`localhost`) && PathPrefix(`/gitea`)"
+        - "traefik.http.services.gitea-websecure.loadbalancer.server.port=3000"
+        - "traefik.http.middlewares.gitea-stripprefix.stripprefix.prefixes=/gitea"
+        - "traefik.http.routers.gitea.middlewares=gitea-stripprefix"
+
+volumes:
+  gitea:
+    driver: local
+
+configs:
+  gitlab:
+    file: ./config/gitlab/gitlab.rb
+
+secrets:
+  gitlab_root_password:
+    file: ./config/gitlab/root_password.txt

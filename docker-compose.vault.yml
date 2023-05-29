@@ -1,0 +1,28 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  vault:
+    image: vault:latest
+    ports:
+      - "8200:8200"
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=root
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+    networks:
+      - proxy
+    cap_add:
+      - IPC_LOCK
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 0
+      placement:
+        constraints: [ node.role == manager ]

@@ -1,0 +1,135 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+  db:
+    driver: overlay
+    name: db
+    attachable: true
+
+volumes:
+  postgres_data:
+  mongo_data:
+
+services:
+  postgres:
+    image: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - proxy
+      - db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+
+  pgadmin4:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: pgadmin4@pgadmin.org
+      PGADMIN_DEFAULT_PASSWORD: admin
+      SCRIPT_NAME: /pgadmin4
+    networks:
+      - proxy
+      - db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.frontend.rule=PathPrefix:/pgadmin4"
+        - "traefik.http.routers.pgadmin4.rule=Host(`localhost`) && PathPrefix(`/pgadmin4`)"
+        - "traefik.http.services.pgadmin4.loadbalancer.server.port=80"
+        - "traefik.http.routers.pgadmin4.service=pgadmin4"
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+      MONGO_INITDB_DATABASE: root
+    volumes:
+      - ./config/mongo/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./config/mongo/file.key:/data/file.key
+      - mongo_data:/data/db
+    command: "mongod --bind_ip_all --keyFile=/data/file.key --auth"
+    networks:
+      - proxy
+      - db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+
+  mongo_express:
+    image: mongo-express
+    environment:
+      ME_CONFIG_SITE_BASEURL: /mongo-express
+      ME_CONFIG_MONGODB_ADMINUSERNAME: mongo
+      ME_CONFIG_MONGODB_ADMINPASSWORD: mongo
+      ME_CONFIG_MONGODB_URL: mongodb://mongo:mongo@mongo:27017/
+    networks:
+      - proxy
+      - db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.mongo-express.rule=Host(`localhost`) && PathPrefix(`/mongo-express`)"
+        - "traefik.http.services.mongo-express.loadbalancer.server.port=8081"
+        - "traefik.http.routers.mongo-express.service=mongo-express"
+
+  redis:
+    image: redis:latest
+    command:
+      - "redis-server"
+      - "--appendonly yes"
+    ports:
+      - "6379:6379"
+    networks:
+      - proxy
+      - db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]

@@ -1,0 +1,32 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  maildev:
+    image: maildev/maildev
+    command: --web 1080 --smtp 1025 --base-pathname /maildev --web-user maildev --web-pass maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.maildev.rule=Host(`localhost`) && PathPrefix(`/maildev`)"
+        - "traefik.http.services.maildev.loadbalancer.server.port=1080"
+        - "traefik.http.routers.maildev.service=maildev"
+    healthcheck:
+      disable: true

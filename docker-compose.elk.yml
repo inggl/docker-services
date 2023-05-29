@@ -1,0 +1,93 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+  elk:
+
+configs:
+  elastic_config:
+    file: ./config/elasticsearch/config/elasticsearch.yml
+  logstash_config:
+    file: ./config/logstash/config/logstash.yml
+  logstash_pipeline:
+    file: ./config/logstash/pipeline/logstash.conf
+  kibana_config:
+    file: ./config/kibana/config/kibana.yml
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.16.3
+    environment:
+      - "ES_JAVA_OPTS=-Xmx256m -Xms256m"
+      - "ELASTIC_USERNAME=elastic"
+      - "ELASTIC_PASSWORD=elastic"
+    ports:
+      - target: 9200
+        published: 9200
+        protocol: tcp
+        mode: host
+    configs:
+      - source: elastic_config
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
+    networks:
+      - proxy
+      - elk
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.16.3
+    user: root
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+    configs:
+      - source: logstash_config
+        target: /usr/share/logstash/config/logstash.yml
+      - source: logstash_pipeline
+        target: /usr/share/logstash/pipeline/logstash.conf
+    networks:
+      - proxy
+      - elk
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 0
+      placement:
+        constraints: [ node.role == manager ]
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.16.3
+    ports:
+      - "5601:5601"
+    configs:
+      - source: kibana_config
+        target: /usr/share/kibana/config/kibana.yml
+    networks:
+      - proxy
+      - elk
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+    deploy:
+      mode: replicated
+      replicas: 0
+      placement:
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.kibana.rule=Host(`localhost`) && PathPrefix(`/kibana`)"
+        - "traefik.http.services.kibana.loadbalancer.server.port=5601"
+        - "traefik.http.routers.kibana.service=kibana"
